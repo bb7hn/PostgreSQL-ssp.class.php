@@ -98,6 +98,7 @@ class SSP {
 
 		if ( isset($request['start']) && $request['length'] != -1 ) {
 			$limit = "OFFSET ".intval($request['start'])." LIMIT ".intval($request['length']);
+			$limit = pg_escape_string($limit);
 		}
 
 		return $limit;
@@ -140,6 +141,7 @@ class SSP {
 
 			if ( count( $orderBy ) ) {
 				$order = 'ORDER BY '.implode(', ', $orderBy);
+				$order = pg_escape_string($order);
 			}
 		}
 
@@ -170,7 +172,7 @@ class SSP {
 
 		if ( isset($request['search']) && $request['search']['value'] != '' ) {
 			$str = $request['search']['value'];
-
+			$str = pg_escape_string($str);
 			for ( $i=0, $ien=count($request['columns']) ; $i<$ien ; $i++ ) {
 				$requestColumn = $request['columns'][$i];
 				$columnIdx = array_search( $requestColumn['data'], $dtColumns );
@@ -193,7 +195,7 @@ class SSP {
 				$column = $columns[ $columnIdx ];
 
 				$str = $requestColumn['search']['value'];
-
+				$str = pg_escape_string($str);
 				if ( $requestColumn['searchable'] == 'true' &&
 				 $str != '' ) {
 					if(!empty($column['db'])){
@@ -209,16 +211,19 @@ class SSP {
 
 		if ( count( $globalSearch ) ) {
 			$where = '('.implode(' OR ', $globalSearch).')';
+			$where = pg_escape_string($where);
 		}
 
 		if ( count( $columnSearch ) ) {
 			$where = $where === '' ?
 				implode(' AND ', $columnSearch) :
 				$where .' AND '. implode(' AND ', $columnSearch);
+			$where = pg_escape_string($where);
 		}
 
 		if ( $where !== '' ) {
 			$where = 'WHERE '.$where;
+			$where = pg_escape_string($where);
 		}
 
 		return $where;
@@ -248,7 +253,6 @@ class SSP {
 		$limit = self::limit( $request, $columns );
 		$order = self::order( $request, $columns );
 		$where = self::filter( $request, $columns, $bindings );
-
 		// Main query to actually get the data
 		$data = self::sql_exec( $db, $bindings,
 			"SELECT ".implode(", ", self::pluck($columns, 'db'))." FROM $table $where $order $limit"
@@ -413,8 +417,9 @@ class SSP {
 		// Argument shifting
 		if ( $sql === null ) {
 			$sql = $bindings;
+			$sql = pg_escape_string($sql);
 		}
-
+		
 		$stmt = $db->prepare( $sql );
 		//echo $sql;
 
@@ -422,6 +427,7 @@ class SSP {
 		if ( is_array( $bindings ) ) {
 			for ( $i=0, $ien=count($bindings) ; $i<$ien ; $i++ ) {
 				$binding = $bindings[$i];
+				$binding = pg_escape_string($binding);
 				$stmt->bindValue( $binding['key'], $binding['val'], $binding['type'] );
 			}
 		}
@@ -522,8 +528,8 @@ class SSP {
 			return '';
 		}
 		else if ( $a && is_array($a) ) {
-			return implode( $join, $a );
+			return pg_escape_string(implode( $join, $a ));
 		}
-		return $a;
+		return pg_escape_string($a);;
 	}
 }
